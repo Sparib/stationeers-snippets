@@ -1,5 +1,6 @@
 {
 	"name": "stationeers-snippets",
+	"displayName": "Stationeers Snippets",
 	"description": "Snippets for Stationeers modding. (Currently only prefab names)",
 	"author": "Sparib",
 	"license": "MIT",

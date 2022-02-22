@@ -177,7 +177,7 @@ connection.onCompletion(
 		const document = documents.get(_textDocumentPosition.textDocument.uri);
 		if (document == null) { return []; }
 		const text = document.getText();
-		const lines = text.split(/r?n/g);
+		const lines = text.split(/\r?\n/g);
 		const position = _textDocumentPosition.position;
 		const linePrefix = lines[position.line].substring(0, position.character);
 		lineText = lines[position.line];
@@ -200,12 +200,14 @@ connection.onCompletion(
 
 connection.onCompletionResolve(
 	(item: CompletionItem): CompletionItem => {
-		if (!lineText.endsWith("</PrefabName>")) {
-			const suffix = "</PrefabName>";
+		const lineEnd = lineText.substring(completionPosition.character);
+		if (!lineEnd.startsWith("</PrefabName>")) {
+			const suffix = "</PrefabName>" + lineEnd;
 			const startChar = completionPosition.character + item.label.length;
 			item.additionalTextEdits = [{
 				newText: suffix,
-				range: {start: {line: completionPosition.line, character: startChar}, end: {line: completionPosition.line, character: startChar + suffix.length}}
+				range: {start: {line: completionPosition.line, character: completionPosition.character + 13},
+					end: {line: completionPosition.line, character: completionPosition.character + item.label.length + suffix.length}}
 			}];
 		}
 		return item;

@@ -22,8 +22,6 @@ import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
 import { list } from './list';
-import { setFlagsFromString } from 'v8';
-import { FileSystem } from 'vscode-languageserver/lib/node/files';
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -32,9 +30,9 @@ const connection = createConnection(ProposedFeatures.all);
 // Create a simple text document manager.
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 
-let hasConfigurationCapability = true;
-let hasWorkspaceFolderCapability = true;
-let hasDiagnosticRelatedInformationCapability = true;
+let hasConfigurationCapability = false;
+let hasWorkspaceFolderCapability = false;
+let hasDiagnosticRelatedInformationCapability = false;
 
 connection.onInitialize((params: InitializeParams) => {
 	const capabilities = params.capabilities;
@@ -90,9 +88,6 @@ interface ExampleSettings {
 	maxNumberOfProblems: number;
 }
 
-// The global settings, used when the `workspace/configuration` request is not supported by the client.
-// Please note that this is not the case when using this server with the client provided in this example
-// but could happen with other clients.
 const defaultSettings: ExampleSettings = { maxNumberOfProblems: 1000 };
 let globalSettings: ExampleSettings = defaultSettings;
 
@@ -179,9 +174,6 @@ let completionPosition: Position = {line: 0, character: 0};
 // This handler provides the initial list of the completion items.
 connection.onCompletion(
 	(_textDocumentPosition: TextDocumentPositionParams): CompletionItem[] => {
-		// The pass parameter contains the position of the text document in
-		// which code complete got requested. For the example we ignore this
-		// info and always provide the same completion items.
 		const document = documents.get(_textDocumentPosition.textDocument.uri);
 		if (document == null) { return []; }
 		const text = document.getText();
@@ -209,7 +201,6 @@ connection.onCompletion(
 connection.onCompletionResolve(
 	(item: CompletionItem): CompletionItem => {
 		if (!lineText.endsWith("</PrefabName>")) {
-			// item.label += "</PrefabName>";
 			const suffix = "</PrefabName>";
 			const startChar = completionPosition.character + item.label.length;
 			item.additionalTextEdits = [{

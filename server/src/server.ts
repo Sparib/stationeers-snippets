@@ -14,7 +14,8 @@ import {
 	CompletionItemKind,
 	TextDocumentPositionParams,
 	TextDocumentSyncKind,
-	InitializeResult
+	InitializeResult,
+	Position
 } from 'vscode-languageserver/node';
 
 import {
@@ -151,33 +152,6 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 	const diagnostics: Diagnostic[] = [];
 	while ((m = pattern.exec(text)) && problems < settings.maxNumberOfProblems) {
 		problems++;
-		// const diagnostic: Diagnostic = {
-		// 	severity: DiagnosticSeverity.Warning,
-		// 	range: {
-		// 		start: textDocument.positionAt(m.index),
-		// 		end: textDocument.positionAt(m.index + m[0].length)
-		// 	},
-		// 	message: `${m[0]} is all uppercase.`,
-		// 	source: 'ex'
-		// };
-		// if (hasDiagnosticRelatedInformationCapability) {
-		// 	diagnostic.relatedInformation = [
-		// 		{
-		// 			location: {
-		// 				uri: textDocument.uri,
-		// 				range: Object.assign({}, diagnostic.range)
-		// 			},
-		// 			message: 'Spelling matters'
-		// 		},
-		// 		{
-		// 			location: {
-		// 				uri: textDocument.uri,
-		// 				range: Object.assign({}, diagnostic.range)
-		// 			},
-		// 			message: 'Particularly for names'
-		// 		}
-		// 	];
-		// }
 		const name = m[0].replace("<PrefabName>", "").replace("</PrefabName>", "");
 
 		if (!list["items"].includes(name)) {
@@ -199,14 +173,8 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 	connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
 }
 
-connection.onDidChangeWatchedFiles(_change => {
-	// Monitored files have change in VSCode
-	connection.console.log('We received an file change event');
-});
-
-// connection.terminated(); print("I'm sorry Elizabeth");
-
 let lineText = "";
+let completionPosition: Position = {line: 0, character: 0};
 
 // This handler provides the initial list of the completion items.
 connection.onCompletion(
@@ -221,6 +189,7 @@ connection.onCompletion(
 		const position = _textDocumentPosition.position;
 		const linePrefix = lines[position.line].substring(0, position.character);
 		lineText = lines[position.line];
+		completionPosition = position;
 
 		if (!linePrefix.endsWith('<PrefabName>')) {
 			return [];
@@ -240,7 +209,13 @@ connection.onCompletion(
 connection.onCompletionResolve(
 	(item: CompletionItem): CompletionItem => {
 		if (!lineText.endsWith("</PrefabName>")) {
-			item.label += "</PrefabName>";
+			// item.label += "</PrefabName>";
+			const suffix = "</PrefabName>";
+			const startChar = completionPosition.character + item.label.length;
+			item.additionalTextEdits = [{
+				newText: suffix,
+				range: {start: {line: completionPosition.line, character: startChar}, end: {line: completionPosition.line, character: startChar + suffix.length}}
+			}];
 		}
 		return item;
 	}
